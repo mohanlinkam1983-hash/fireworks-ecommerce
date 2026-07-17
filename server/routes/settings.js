@@ -1,12 +1,10 @@
-const express = require('express');
+import express from 'express';
+import SettingsController from '../controllers/SettingsController.js';
+
 const router = express.Router();
-const SettingsController = require('../controllers/SettingsController');
-const multer = require('multer');
 
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
-
+// Routes
 router.get('/', SettingsController.get);
-router.put('/', upload.single('logo'), SettingsController.update);
+router.put('/', SettingsController.update);
 
-module.exports = router;
+export default router;

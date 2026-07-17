@@ -1,11 +1,13 @@
-const express = require('express');
-const router = express.Router();
-const CategoryController = require('../controllers/CategoryController');
+import express from 'express';
+import CategoryController from '../controllers/CategoryController.js';
 
+const router = express.Router();
+
+// Routes
 router.get('/', CategoryController.getAll);
 router.get('/:id', CategoryController.getById);
 router.post('/', CategoryController.create);
 router.put('/:id', CategoryController.update);
 router.delete('/:id', CategoryController.delete);
 
-module.exports = router;
+export default router;
