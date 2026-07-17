@@ -1,46 +1,32 @@
-const Settings = require('../models/Settings');
-const sharp = require('sharp');
-const path = require('path');
-
-const UPLOAD_DIR = path.join(__dirname, '../../public/uploads');
+import db from '../database/db.js';
 
 class SettingsController {
-  static async get(req, res) {
-    try {
-      const settings = await Settings.getAll();
-      res.json(settings);
-    } catch (error) {
-      res.status(500).json({ error: error.message });
+    static get(req, res) {
+        try {
+            const stmt = db.prepare('SELECT * FROM settings WHERE id = 1');
+            const settings = stmt.get();
+            res.json(settings || {});
+        } catch (error) {
+            console.error('Error fetching settings:', error);
+            res.status(500).json({ error: 'Error fetching settings' });
+        }
     }
-  }
 
-  static async update(req, res) {
-    try {
-      const data = req.body;
-      
-      // Handle logo upload
-      if (req.file) {
-        const filename = `logo_${Date.now()}_${req.file.originalname}`;
-        const filepath = path.join(UPLOAD_DIR, filename);
-        
-        await sharp(req.file.buffer)
-          .resize(200, 200, { fit: 'cover' })
-          .toFile(filepath);
-        
-        data.logo_url = `/uploads/${filename}`;
-      }
+    static update(req, res) {
+        try {
+            const { company_name, phone, whatsapp, email, address, bank_details } = req.body;
 
-      // Handle social links as JSON
-      if (typeof data.social_links === 'string') {
-        data.social_links = JSON.stringify(JSON.parse(data.social_links));
-      }
+            const stmt = db.prepare(
+                'UPDATE settings SET company_name = ?, phone = ?, whatsapp = ?, email = ?, address = ?, bank_details = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1'
+            );
+            stmt.run(company_name, phone, whatsapp, email, address, bank_details);
 
-      await Settings.update(data);
-      res.json({ message: 'Settings updated successfully' });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
+            res.json({ message: 'Settings updated successfully' });
+        } catch (error) {
+            console.error('Error updating settings:', error);
+            res.status(500).json({ error: 'Error updating settings' });
+        }
     }
-  }
 }
 
-module.exports = SettingsController;
+export default SettingsController;

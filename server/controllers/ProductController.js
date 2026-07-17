@@ -1,124 +1,110 @@
-const Product = require('../models/Product');
-const Category = require('../models/Category');
-const sharp = require('sharp');
-const path = require('path');
-const fs = require('fs').promises;
-
-const UPLOAD_DIR = path.join(__dirname, '../../public/uploads');
+import db from '../database/db.js';
 
 class ProductController {
-  static async getAllRetail(req, res) {
-    try {
-      const { category_id, search, sort } = req.query;
-      const products = await Product.getAll({ category_id, search, sort });
-      res.json(products);
-    } catch (error) {
-      res.status(500).json({ error: error.message });
+    static getAll(req, res) {
+        try {
+            const { category_id, search, sort } = req.query;
+            let sql = 'SELECT * FROM products WHERE enabled = 1';
+            const params = [];
+
+            if (category_id) {
+                sql += ' AND category_id = ?';
+                params.push(category_id);
+            }
+
+            if (search) {
+                sql += ' AND (name_en LIKE ? OR name_ta LIKE ?)';
+                params.push(`%${search}%`, `%${search}%`);
+            }
+
+            if (sort === 'alphabetical') {
+                sql += ' ORDER BY name_en ASC';
+            } else if (sort === 'price_low') {
+                sql += ' ORDER BY offer_price ASC';
+            } else if (sort === 'price_high') {
+                sql += ' ORDER BY offer_price DESC';
+            } else if (sort === 'newest') {
+                sql += ' ORDER BY created_at DESC';
+            } else {
+                sql += ' ORDER BY created_at DESC';
+            }
+
+            const stmt = db.prepare(sql);
+            const products = stmt.all(...params);
+            res.json(products);
+        } catch (error) {
+            console.error('Error fetching products:', error);
+            res.status(500).json({ error: 'Error fetching products' });
+        }
     }
-  }
 
-  static async getById(req, res) {
-    try {
-      const product = await Product.getById(req.params.id);
-      if (!product) {
-        return res.status(404).json({ error: 'Product not found' });
-      }
-      res.json(product);
-    } catch (error) {
-      res.status(500).json({ error: error.message });
+    static getById(req, res) {
+        try {
+            const { id } = req.params;
+            const stmt = db.prepare('SELECT * FROM products WHERE id = ?');
+            const product = stmt.get(id);
+
+            if (!product) {
+                return res.status(404).json({ error: 'Product not found' });
+            }
+
+            res.json(product);
+        } catch (error) {
+            console.error('Error fetching product:', error);
+            res.status(500).json({ error: 'Error fetching product' });
+        }
     }
-  }
 
-  static async create(req, res) {
-    try {
-      const { product_number, category_id, name_en, name_ta, packing, mrp, offer_price, description, enabled } = req.body;
-      
-      let image_url = '';
-      if (req.file) {
-        const filename = `${Date.now()}_${req.file.originalname}`;
-        const filepath = path.join(UPLOAD_DIR, filename);
-        
-        await sharp(req.file.buffer)
-          .resize(400, 400, { fit: 'cover' })
-          .toFile(filepath);
-        
-        image_url = `/uploads/${filename}`;
-      }
+    static create(req, res) {
+        try {
+            const { product_number, category_id, name_en, name_ta, packing, mrp, offer_price, description } = req.body;
+            const image_url = req.file ? `/uploads/${req.file.filename}` : null;
 
-      const result = await Product.create({
-        product_number,
-        category_id,
-        name_en,
-        name_ta,
-        packing,
-        mrp,
-        offer_price,
-        image_url,
-        description,
-        enabled
-      });
+            if (!product_number || !category_id || !name_en || !mrp || !offer_price) {
+                return res.status(400).json({ error: 'Missing required fields' });
+            }
 
-      res.status(201).json({ id: result.id, message: 'Product created successfully' });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
+            const stmt = db.prepare(
+                'INSERT INTO products (product_number, category_id, name_en, name_ta, packing, mrp, offer_price, image_url, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+            );
+            const result = stmt.run(product_number, category_id, name_en, name_ta, packing, mrp, offer_price, image_url, description);
+
+            res.status(201).json({ id: result.lastInsertRowid, message: 'Product created successfully' });
+        } catch (error) {
+            console.error('Error creating product:', error);
+            res.status(500).json({ error: 'Error creating product' });
+        }
     }
-  }
 
-  static async update(req, res) {
-    try {
-      const { id } = req.params;
-      const { product_number, category_id, name_en, name_ta, packing, mrp, offer_price, description, enabled } = req.body;
-      
-      const product = await Product.getById(id);
-      if (!product) {
-        return res.status(404).json({ error: 'Product not found' });
-      }
+    static update(req, res) {
+        try {
+            const { id } = req.params;
+            const { product_number, category_id, name_en, name_ta, packing, mrp, offer_price, description } = req.body;
 
-      let image_url = product.image_url;
-      if (req.file) {
-        const filename = `${Date.now()}_${req.file.originalname}`;
-        const filepath = path.join(UPLOAD_DIR, filename);
-        
-        await sharp(req.file.buffer)
-          .resize(400, 400, { fit: 'cover' })
-          .toFile(filepath);
-        
-        image_url = `/uploads/${filename}`;
-      }
+            const stmt = db.prepare(
+                'UPDATE products SET product_number = ?, category_id = ?, name_en = ?, name_ta = ?, packing = ?, mrp = ?, offer_price = ?, description = ? WHERE id = ?'
+            );
+            stmt.run(product_number, category_id, name_en, name_ta, packing, mrp, offer_price, description, id);
 
-      await Product.update(id, {
-        product_number,
-        category_id,
-        name_en,
-        name_ta,
-        packing,
-        mrp,
-        offer_price,
-        image_url,
-        description,
-        enabled
-      });
-
-      res.json({ message: 'Product updated successfully' });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
+            res.json({ message: 'Product updated successfully' });
+        } catch (error) {
+            console.error('Error updating product:', error);
+            res.status(500).json({ error: 'Error updating product' });
+        }
     }
-  }
 
-  static async delete(req, res) {
-    try {
-      const { id } = req.params;
-      const product = await Product.getById(id);
-      if (!product) {
-        return res.status(404).json({ error: 'Product not found' });
-      }
+    static delete(req, res) {
+        try {
+            const { id } = req.params;
+            const stmt = db.prepare('DELETE FROM products WHERE id = ?');
+            stmt.run(id);
 
-      await Product.delete(id);
-      res.json({ message: 'Product deleted successfully' });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
+            res.json({ message: 'Product deleted successfully' });
+        } catch (error) {
+            console.error('Error deleting product:', error);
+            res.status(500).json({ error: 'Error deleting product' });
+        }
     }
-  }
 }
 
-module.exports = ProductController;
+export default ProductController;

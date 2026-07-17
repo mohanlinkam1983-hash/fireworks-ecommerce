@@ -1,26 +1,36 @@
-const Customer = require('../models/Customer');
+import db from '../database/db.js';
 
 class CustomerController {
-  static async getAll(req, res) {
-    try {
-      const customers = await Customer.getAll();
-      res.json(customers);
-    } catch (error) {
-      res.status(500).json({ error: error.message });
+    static getAll(req, res) {
+        try {
+            const stmt = db.prepare('SELECT * FROM customers ORDER BY created_at DESC');
+            const customers = stmt.all();
+            res.json(customers);
+        } catch (error) {
+            console.error('Error fetching customers:', error);
+            res.status(500).json({ error: 'Error fetching customers' });
+        }
     }
-  }
 
-  static async getById(req, res) {
-    try {
-      const customer = await Customer.getById(req.params.id);
-      if (!customer) {
-        return res.status(404).json({ error: 'Customer not found' });
-      }
-      res.json(customer);
-    } catch (error) {
-      res.status(500).json({ error: error.message });
+    static getById(req, res) {
+        try {
+            const { id } = req.params;
+            const stmt = db.prepare('SELECT * FROM customers WHERE id = ?');
+            const customer = stmt.get(id);
+
+            if (!customer) {
+                return res.status(404).json({ error: 'Customer not found' });
+            }
+
+            const ordersStmt = db.prepare('SELECT * FROM orders WHERE customer_id = ?');
+            const orders = ordersStmt.all(id);
+
+            res.json({ ...customer, orders });
+        } catch (error) {
+            console.error('Error fetching customer:', error);
+            res.status(500).json({ error: 'Error fetching customer' });
+        }
     }
-  }
 }
 
-module.exports = CustomerController;
+export default CustomerController;

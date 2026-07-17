@@ -1,206 +1,136 @@
-const Order = require('../models/Order');
-const OrderItem = require('../models/OrderItem');
-const Customer = require('../models/Customer');
-const Product = require('../models/Product');
-const WholesaleProduct = require('../models/WholesaleProduct');
-const PDFDocument = require('pdfkit');
-const path = require('path');
-const fs = require('fs');
-const Settings = require('../models/Settings');
+import db from '../database/db.js';
 
 class OrderController {
-  static async create(req, res) {
-    try {
-      const { customer, items, subtotal, discount, delivery_charge, grand_total, special_instructions, order_type } = req.body;
+    static getAll(req, res) {
+        try {
+            const { order_type } = req.query;
+            let sql = 'SELECT * FROM orders';
+            const params = [];
 
-      if (!customer || !items || items.length === 0) {
-        return res.status(400).json({ error: 'Invalid order data' });
-      }
+            if (order_type) {
+                sql += ' WHERE order_type = ?';
+                params.push(order_type);
+            }
 
-      // Create customer
-      const customerResult = await Customer.create(customer);
-      const customerId = customerResult.id;
+            sql += ' ORDER BY created_at DESC';
 
-      // Create order
-      const orderId = Order.generateOrderId(order_type);
-      const orderResult = await Order.create({
-        order_id: orderId,
-        customer_id: customerId,
-        order_type: order_type || 'retail',
-        subtotal,
-        discount: discount || 0,
-        delivery_charge: delivery_charge || 0,
-        grand_total,
-        special_instructions
-      });
-
-      // Create order items
-      for (const item of items) {
-        await OrderItem.create({
-          order_id: orderResult.id,
-          product_id: item.product_id,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          total_price: item.total_price,
-          product_type: item.product_type || 'retail'
-        });
-      }
-
-      res.status(201).json({
-        order_id: orderId,
-        message: 'Order created successfully',
-        order_number: orderResult.id
-      });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
+            const stmt = db.prepare(sql);
+            const orders = stmt.all(...params);
+            res.json(orders);
+        } catch (error) {
+            console.error('Error fetching orders:', error);
+            res.status(500).json({ error: 'Error fetching orders' });
+        }
     }
-  }
 
-  static async getAll(req, res) {
-    try {
-      const { order_type, status, search } = req.query;
-      const orders = await Order.getAll({ order_type, status, search });
-      res.json(orders);
-    } catch (error) {
-      res.status(500).json({ error: error.message });
+    static getById(req, res) {
+        try {
+            const { id } = req.params;
+            const stmt = db.prepare('SELECT * FROM orders WHERE id = ?');
+            const order = stmt.get(id);
+
+            if (!order) {
+                return res.status(404).json({ error: 'Order not found' });
+            }
+
+            const itemsStmt = db.prepare('SELECT * FROM order_items WHERE order_id = ?');
+            const items = itemsStmt.all(order.id);
+
+            res.json({ ...order, items });
+        } catch (error) {
+            console.error('Error fetching order:', error);
+            res.status(500).json({ error: 'Error fetching order' });
+        }
     }
-  }
 
-  static async getById(req, res) {
-    try {
-      const order = await Order.getById(req.params.id);
-      if (!order) {
-        return res.status(404).json({ error: 'Order not found' });
-      }
+    static create(req, res) {
+        try {
+            const { customer, items, order_type, subtotal, discount, delivery_charge, grand_total, special_instructions } = req.body;
 
-      const items = await OrderItem.getByOrderId(req.params.id);
-      res.json({ ...order, items });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
+            if (!customer || !items || items.length === 0) {
+                return res.status(400).json({ error: 'Invalid order data' });
+            }
+
+            // Create or get customer
+            let customerId;
+            try {
+                const customerStmt = db.prepare(
+                    'INSERT INTO customers (name, mobile, whatsapp, email, city, state, pincode, address) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+                );
+                const customerResult = customerStmt.run(
+                    customer.name,
+                    customer.mobile,
+                    customer.whatsapp,
+                    customer.email,
+                    customer.city,
+                    customer.state,
+                    customer.pincode,
+                    customer.address
+                );
+                customerId = customerResult.lastInsertRowid;
+            } catch (err) {
+                // Customer might already exist, try to find by mobile
+                const findStmt = db.prepare('SELECT id FROM customers WHERE mobile = ?');
+                const existingCustomer = findStmt.get(customer.mobile);
+                if (existingCustomer) {
+                    customerId = existingCustomer.id;
+                } else {
+                    throw err;
+                }
+            }
+
+            // Generate order ID
+            const orderId = 'SM' + new Date().getFullYear() + String(customerId).padStart(6, '0');
+
+            // Create order
+            const orderStmt = db.prepare(
+                'INSERT INTO orders (order_id, customer_id, order_type, subtotal, discount, delivery_charge, grand_total, special_instructions) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+            );
+            const orderResult = orderStmt.run(orderId, customerId, order_type, subtotal, discount, delivery_charge, grand_total, special_instructions);
+
+            // Add order items
+            const itemStmt = db.prepare(
+                'INSERT INTO order_items (order_id, product_id, quantity, unit_price, total_price, product_type) VALUES (?, ?, ?, ?, ?, ?)'
+            );
+
+            items.forEach(item => {
+                itemStmt.run(orderResult.lastInsertRowid, item.product_id, item.quantity, item.price, item.price * item.quantity, item.type);
+            });
+
+            res.status(201).json({ order_id: orderId, message: 'Order created successfully' });
+        } catch (error) {
+            console.error('Error creating order:', error);
+            res.status(500).json({ error: 'Error creating order', details: error.message });
+        }
     }
-  }
 
-  static async getByOrderId(req, res) {
-    try {
-      const order = await Order.getByOrderId(req.params.order_id);
-      if (!order) {
-        return res.status(404).json({ error: 'Order not found' });
-      }
+    static updateStatus(req, res) {
+        try {
+            const { id } = req.params;
+            const { status } = req.body;
 
-      const items = await OrderItem.getByOrderId(order.id);
-      res.json({ ...order, items });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
+            const stmt = db.prepare('UPDATE orders SET status = ? WHERE id = ?');
+            stmt.run(status, id);
+
+            res.json({ message: 'Order status updated successfully' });
+        } catch (error) {
+            console.error('Error updating order status:', error);
+            res.status(500).json({ error: 'Error updating order status' });
+        }
     }
-  }
 
-  static async updateStatus(req, res) {
-    try {
-      const { id } = req.params;
-      const { status } = req.body;
+    static delete(req, res) {
+        try {
+            const { id } = req.params;
+            const stmt = db.prepare('DELETE FROM orders WHERE id = ?');
+            stmt.run(id);
 
-      const order = await Order.getById(id);
-      if (!order) {
-        return res.status(404).json({ error: 'Order not found' });
-      }
-
-      await Order.update(id, { status });
-      res.json({ message: 'Order status updated successfully' });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
+            res.json({ message: 'Order deleted successfully' });
+        } catch (error) {
+            console.error('Error deleting order:', error);
+            res.status(500).json({ error: 'Error deleting order' });
+        }
     }
-  }
-
-  static async delete(req, res) {
-    try {
-      const { id } = req.params;
-      const order = await Order.getById(id);
-      if (!order) {
-        return res.status(404).json({ error: 'Order not found' });
-      }
-
-      await Order.delete(id);
-      res.json({ message: 'Order deleted successfully' });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  }
-
-  static async generatePDF(req, res) {
-    try {
-      const { order_id } = req.params;
-      const order = await Order.getByOrderId(order_id);
-      if (!order) {
-        return res.status(404).json({ error: 'Order not found' });
-      }
-
-      const items = await OrderItem.getByOrderId(order.id);
-      const settings = await Settings.getAll();
-
-      const doc = new PDFDocument();
-      const filename = `invoice-${order_id}.pdf`;
-      const filepath = path.join(__dirname, '../../public/uploads', filename);
-
-      doc.pipe(fs.createWriteStream(filepath));
-
-      // Header
-      doc.fontSize(20).font('Helvetica-Bold').text(settings?.company_name || 'Fireworks Store', { align: 'center' });
-      doc.fontSize(10).text('Invoice', { align: 'center' });
-      doc.moveDown();
-
-      // Order Details
-      doc.fontSize(10).font('Helvetica-Bold').text('Order Details:', { underline: true });
-      doc.font('Helvetica').text(`Order ID: ${order.order_id}`);
-      doc.text(`Date: ${new Date(order.created_at).toLocaleDateString()}`);
-      doc.text(`Status: ${order.status}`);
-      doc.moveDown();
-
-      // Customer Details
-      doc.font('Helvetica-Bold').text('Customer Details:', { underline: true });
-      doc.font('Helvetica');
-      doc.text(`Name: ${order.name}`);
-      doc.text(`Mobile: ${order.mobile}`);
-      doc.text(`Email: ${order.email}`);
-      doc.text(`Address: ${order.address}, ${order.city}, ${order.state} - ${order.pincode}`);
-      doc.moveDown();
-
-      // Items Table
-      doc.font('Helvetica-Bold').text('Items:', { underline: true });
-      doc.font('Helvetica').fontSize(9);
-      const tableTop = doc.y + 10;
-      doc.text('Product', 50, tableTop);
-      doc.text('Qty', 250, tableTop);
-      doc.text('Price', 300, tableTop);
-      doc.text('Total', 350, tableTop);
-
-      let y = tableTop + 20;
-      items.forEach((item) => {
-        doc.text(item.name_en, 50, y);
-        doc.text(item.quantity, 250, y);
-        doc.text(`Rs. ${item.unit_price}`, 300, y);
-        doc.text(`Rs. ${item.total_price}`, 350, y);
-        y += 20;
-      });
-
-      doc.moveDown(2);
-      doc.font('Helvetica-Bold');
-      doc.text(`Subtotal: Rs. ${order.subtotal}`, 300);
-      if (order.discount) doc.text(`Discount: Rs. ${order.discount}`, 300);
-      if (order.delivery_charge) doc.text(`Delivery: Rs. ${order.delivery_charge}`, 300);
-      doc.text(`Grand Total: Rs. ${order.grand_total}`, 300);
-
-      doc.moveDown(2);
-      doc.font('Helvetica').fontSize(10).text('Thank you for your order!', { align: 'center' });
-
-      doc.end();
-
-      doc.on('finish', () => {
-        res.download(filepath);
-      });
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  }
 }
 
-module.exports = OrderController;
+export default OrderController;
