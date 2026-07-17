@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Fireworks Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body class="bg-gray-100">
+    <!-- Login Page -->
+    <div id="login-page" class="min-h-screen flex items-center justify-center bg-gradient-to-r from-green-600 to-green-800">
+        <div class="bg-white rounded-lg shadow-2xl p-8 w-full max-w-md">
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-bold text-green-600">🎆 Admin Panel</h1>
+                <p class="text-gray-600 mt-2">Fireworks Store Management</p>
+            </div>
+
+            <form id="login-form" class="space-y-6">
+                <div>
+                    <label class="block text-gray-700 font-bold mb-2">Username</label>
+                    <input type="text" id="login-username" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="admin">
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-bold mb-2">Password</label>
+                    <input type="password" id="login-password" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="••••••••">
+                </div>
+                <button type="submit" class="w-full bg-green-600 text-white font-bold py-2 rounded-lg hover:bg-green-700 transition">
+                    Login
+                </button>
+            </form>
+            <p class="text-center text-gray-600 text-sm mt-4">Default: admin / admin123</p>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard-page" class="hidden">
+        <nav class="bg-green-600 text-white shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-16">
+                    <h1 class="text-2xl font-bold">🎆 Fireworks Admin</h1>
+                    <button onclick="logout()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded">Logout</button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="flex h-screen-minus-nav">
+            <!-- Sidebar -->
+            <aside class="w-64 bg-gray-800 text-white p-6">
+                <nav class="space-y-4">
+                    <button onclick="showTab('dashboard')" class="nav-btn w-full text-left px-4 py-2 rounded hover:bg-gray-700 transition">📊 Dashboard</button>
+                    <button onclick="showTab('categories')" class="nav-btn w-full text-left px-4 py-2 rounded hover:bg-gray-700 transition">📁 Categories</button>
+                    <button onclick="showTab('products')" class="nav-btn w-full text-left px-4 py-2 rounded hover:bg-gray-700 transition">🛍️ Retail Products</button>
+                    <button onclick="showTab('wholesale')" class="nav-btn w-full text-left px-4 py-2 rounded hover:bg-gray-700 transition">🏢 Wholesale Products</button>
+                    <button onclick="showTab('retail-orders')" class="nav-btn w-full text-left px-4 py-2 rounded hover:bg-gray-700 transition">📦 Retail Orders</button>
+                    <button onclick="showTab('wholesale-orders')" class="nav-btn w-full text-left px-4 py-2 rounded hover:bg-gray-700 transition">📫 Wholesale Orders</button>
+                    <button onclick="showTab('customers')" class="nav-btn w-full text-left px-4 py-2 rounded hover:bg-gray-700 transition">👥 Customers</button>
+                    <button onclick="showTab('settings')" class="nav-btn w-full text-left px-4 py-2 rounded hover:bg-gray-700 transition">⚙️ Settings</button>
+                </nav>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="flex-1 overflow-auto p-8">
+                <!-- Dashboard Tab -->
+                <div id="dashboard-tab" class="content-tab">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-8">Dashboard</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <h3 class="text-gray-600 font-bold mb-2">Total Orders</h3>
+                            <p class="text-3xl font-bold text-green-600" id="total-orders">0</p>
+                        </div>
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <h3 class="text-gray-600 font-bold mb-2">Total Customers</h3>
+                            <p class="text-3xl font-bold text-blue-600" id="total-customers">0</p>
+                        </div>
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <h3 class="text-gray-600 font-bold mb-2">Total Products</h3>
+                            <p class="text-3xl font-bold text-purple-600" id="total-products">0</p>
+                        </div>
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <h3 class="text-gray-600 font-bold mb-2">Total Revenue</h3>
+                            <p class="text-3xl font-bold text-orange-600" id="total-revenue">Rs. 0</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">Recent Orders</h3>
+                        <div id="recent-orders" class="space-y-3">
+                            <!-- Will be populated -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Categories Tab -->
+                <div id="categories-tab" class="content-tab hidden">
+                    <div class="flex justify-between items-center mb-8">
+                        <h2 class="text-3xl font-bold text-gray-800">Categories</h2>
+                        <button onclick="openCategoryModal()" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700">+ Add Category</button>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow overflow-hidden">
+                        <table class="w-full">
+                            <thead class="bg-gray-200">
+                                <tr>
+                                    <th class="px-6 py-3 text-left">ID</th>
+                                    <th class="px-6 py-3 text-left">Name</th>
+                                    <th class="px-6 py-3 text-left">Description</th>
+                                    <th class="px-6 py-3 text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="categories-list" class="divide-y">
+                                <!-- Will be populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Products Tab -->
+                <div id="products-tab" class="content-tab hidden">
+                    <div class="flex justify-between items-center mb-8">
+                        <h2 class="text-3xl font-bold text-gray-800">Retail Products</h2>
+                        <button onclick="openProductModal()" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700">+ Add Product</button>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow overflow-hidden overflow-x-auto">
+                        <table class="w-full min-w-max">
+                            <thead class="bg-gray-200">
+                                <tr>
+                                    <th class="px-6 py-3 text-left">Product #</th>
+                                    <th class="px-6 py-3 text-left">Name</th>
+                                    <th class="px-6 py-3 text-left">Category</th>
+                                    <th class="px-6 py-3 text-left">MRP</th>
+                                    <th class="px-6 py-3 text-left">Offer</th>
+                                    <th class="px-6 py-3 text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="products-list" class="divide-y">
+                                <!-- Will be populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Wholesale Tab -->
+                <div id="wholesale-tab" class="content-tab hidden">
+                    <div class="flex justify-between items-center mb-8">
+                        <h2 class="text-3xl font-bold text-gray-800">Wholesale Products</h2>
+                        <button onclick="openWholesaleModal()" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700">+ Add Product</button>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow overflow-hidden overflow-x-auto">
+                        <table class="w-full min-w-max">
+                            <thead class="bg-gray-200">
+                                <tr>
+                                    <th class="px-6 py-3 text-left">Product #</th>
+                                    <th class="px-6 py-3 text-left">Name</th>
+                                    <th class="px-6 py-3 text-left">Category</th>
+                                    <th class="px-6 py-3 text-left">Unit Price</th>
+                                    <th class="px-6 py-3 text-left">Price</th>
+                                    <th class="px-6 py-3 text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="wholesale-list" class="divide-y">
+                                <!-- Will be populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Retail Orders Tab -->
+                <div id="retail-orders-tab" class="content-tab hidden">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-8">Retail Orders</h2>
+
+                    <div class="bg-white rounded-lg shadow overflow-hidden overflow-x-auto">
+                        <table class="w-full min-w-max">
+                            <thead class="bg-gray-200">
+                                <tr>
+                                    <th class="px-6 py-3 text-left">Order ID</th>
+                                    <th class="px-6 py-3 text-left">Customer</th>
+                                    <th class="px-6 py-3 text-left">Total</th>
+                                    <th class="px-6 py-3 text-left">Status</th>
+                                    <th class="px-6 py-3 text-left">Date</th>
+                                    <th class="px-6 py-3 text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="retail-orders-list" class="divide-y">
+                                <!-- Will be populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Wholesale Orders Tab -->
+                <div id="wholesale-orders-tab" class="content-tab hidden">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-8">Wholesale Orders</h2>
+
+                    <div class="bg-white rounded-lg shadow overflow-hidden overflow-x-auto">
+                        <table class="w-full min-w-max">
+                            <thead class="bg-gray-200">
+                                <tr>
+                                    <th class="px-6 py-3 text-left">Order ID</th>
+                                    <th class="px-6 py-3 text-left">Customer</th>
+                                    <th class="px-6 py-3 text-left">Total</th>
+                                    <th class="px-6 py-3 text-left">Status</th>
+                                    <th class="px-6 py-3 text-left">Date</th>
+                                    <th class="px-6 py-3 text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="wholesale-orders-list" class="divide-y">
+                                <!-- Will be populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Customers Tab -->
+                <div id="customers-tab" class="content-tab hidden">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-8">Customers</h2>
+
+                    <div class="bg-white rounded-lg shadow overflow-hidden overflow-x-auto">
+                        <table class="w-full min-w-max">
+                            <thead class="bg-gray-200">
+                                <tr>
+                                    <th class="px-6 py-3 text-left">Name</th>
+                                    <th class="px-6 py-3 text-left">Mobile</th>
+                                    <th class="px-6 py-3 text-left">Email</th>
+                                    <th class="px-6 py-3 text-left">City</th>
+                                    <th class="px-6 py-3 text-left">Orders</th>
+                                    <th class="px-6 py-3 text-left">Total Purchase</th>
+                                </tr>
+                            </thead>
+                            <tbody id="customers-list" class="divide-y">
+                                <!-- Will be populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Settings Tab -->
+                <div id="settings-tab" class="content-tab hidden">
+                    <h2 class="text-3xl font-bold text-gray-800 mb-8">Website Settings</h2>
+
+                    <form id="settings-form" class="bg-white rounded-lg shadow p-8 max-w-2xl">
+                        <div class="space-y-6">
+                            <div>
+                                <label class="block text-gray-700 font-bold mb-2">Company Name</label>
+                                <input type="text" id="settings-company-name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 font-bold mb-2">Phone</label>
+                                <input type="tel" id="settings-phone" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 font-bold mb-2">WhatsApp</label>
+                                <input type="tel" id="settings-whatsapp" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 font-bold mb-2">Email</label>
+                                <input type="email" id="settings-email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 font-bold mb-2">Address</label>
+                                <textarea id="settings-address" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" rows="3"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 font-bold mb-2">Bank Details</label>
+                                <textarea id="settings-bank-details" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" rows="3"></textarea>
+                            </div>
+                            <button type="submit" class="w-full bg-green-600 text-white font-bold py-2 rounded-lg hover:bg-green-700 transition">
+                                Save Settings
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <!-- Category Modal -->
+    <div id="category-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Add Category</h2>
+            <form id="category-form" class="space-y-4">
+                <div>
+                    <label class="block text-gray-700 font-bold mb-2">Category Name *</label>
+                    <input type="text" id="category-name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-bold mb-2">Description</label>
+                    <textarea id="category-description" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" rows="3"></textarea>
+                </div>
+                <div class="flex gap-4">
+                    <button type="submit" class="flex-1 bg-green-600 text-white font-bold py-2 rounded-lg hover:bg-green-700 transition">Save</button>
+                    <button type="button" onclick="closeCategoryModal()" class="flex-1 bg-gray-300 text-gray-800 font-bold py-2 rounded-lg hover:bg-gray-400 transition">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Product Modal -->
+    <div id="product-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+        <div class="bg-white rounded-lg p-8 max-w-2xl w-full my-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Add/Edit Product</h2>
+            <form id="product-form" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-gray-700 font-bold mb-2">Product Number *</label>
+                        <input type="text" id="product-number" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-bold mb-2">Category *</label>
+                        <select id="product-category" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                            <option value="">Select Category</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-bold mb-2">Name (English) *</label>
+                        <input type="text" id="product-name-en" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-bold mb-2">Name (Tamil) *</label>
+                        <input type="text" id="product-name-ta" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-bold mb-2">Packing *</label>
+                        <input type="text" id="product-packing" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-bold mb-2">MRP *</label>
+                        <input type="number" id="product-mrp" required step="0.01" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-bold mb-2">Offer Price *</label>
+                        <input type="number" id="product-offer-price" required step="0.01" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-bold mb-2">Description</label>
+                    <textarea id="product-description" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" rows="3"></textarea>
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-bold mb-2">Image</label>
+                    <input type="file" id="product-image" accept="image/*" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                </div>
+                <div class="flex gap-4">
+                    <button type="submit" class="flex-1 bg-green-600 text-white font-bold py-2 rounded-lg hover:bg-green-700 transition">Save</button>
+                    <button type="button" onclick="closeProductModal()" class="flex-1 bg-gray-300 text-gray-800 font-bold py-2 rounded-lg hover:bg-gray-400 transition">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Wholesale Modal -->
+    <div id="wholesale-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+        <div class="bg-white rounded-lg p-8 max-w-2xl w-full my-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Add/Edit Wholesale Product</h2>
+            <form id="wholesale-form" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-gray-700 font-bold mb-2">Product Number *</label>
+                        <input type="text" id="wholesale-number" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-bold mb-2">Category *</label>
+                        <select id="wholesale-category" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                            <option value="">Select Category</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-bold mb-2">Name (English) *</label>
+                        <input type="text" id="wholesale-name-en" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-bold mb-2">Name (Tamil) *</label>
+                        <input type="text" id="wholesale-name-ta" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-bold mb-2">Packing *</label>
+                        <input type="text" id="wholesale-packing" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-bold mb-2">Unit Price *</label>
+                        <input type="number" id="wholesale-unit-price" required step="0.01" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-bold mb-2">Price *</label>
+                        <input type="number" id="wholesale-price" required step="0.01" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-bold mb-2">Description</label>
+                    <textarea id="wholesale-description" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" rows="3"></textarea>
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-bold mb-2">Image</label>
+                    <input type="file" id="wholesale-image" accept="image/*" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                </div>
+                <div class="flex gap-4">
+                    <button type="submit" class="flex-1 bg-green-600 text-white font-bold py-2 rounded-lg hover:bg-green-700 transition">Save</button>
+                    <button type="button" onclick="closeWholesaleModal()" class="flex-1 bg-gray-300 text-gray-800 font-bold py-2 rounded-lg hover:bg-gray-400 transition">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/admin.js"></script>
+</body>
+</html>
