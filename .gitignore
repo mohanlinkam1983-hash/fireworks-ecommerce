@@ -1,9 +1,6 @@
 node_modules/
 .env
-*.log
-public/uploads/
-public/images/
-database.db
+*.db
+public/uploads/*
 .DS_Store
-dist/
-build/
+*.log
