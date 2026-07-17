@@ -1,35 +1,14 @@
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+import Database from 'better-sqlite3';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const dbPath = process.env.DB_PATH || path.join(__dirname, 'fireworks.db');
-const db = new sqlite3.Database(dbPath);
+const db = new Database(dbPath);
 
-// Helper functions
-db.get = (sql, params) => {
-    return new Promise((resolve, reject) => {
-        db.get(sql, params, (err, row) => {
-            if (err) reject(err);
-            else resolve(row);
-        });
-    });
-};
+// Enable foreign keys
+db.pragma('foreign_keys = ON');
 
-db.all = (sql, params) => {
-    return new Promise((resolve, reject) => {
-        db.all(sql, params, (err, rows) => {
-            if (err) reject(err);
-            else resolve(rows);
-        });
-    });
-};
-
-db.run = (sql, params) => {
-    return new Promise((resolve, reject) => {
-        db.run(sql, params, function(err) {
-            if (err) reject(err);
-            else resolve({ id: this.lastID });
-        });
-    });
-};
-
-module.exports = db;
+export default db;
