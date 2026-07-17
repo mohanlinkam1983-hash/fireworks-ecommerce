@@ -1,0 +1,57 @@
+/* Admin CSS */
+:root {
+    --primary-color: #16a34a;
+    --secondary-color: #15803d;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+}
+
+.h-screen-minus-nav {
+    height: calc(100vh - 64px);
+}
+
+.nav-btn {
+    background: transparent;
+    border: none;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.nav-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.nav-btn.active {
+    background-color: var(--primary-color);
+}
+
+.content-tab {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table tr:hover {
+    background-color: #f3f4f6;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

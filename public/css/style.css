@@ -1,0 +1,48 @@
+/* Custom styles */
+:root {
+    --primary-color: #16a34a;
+    --secondary-color: #15803d;
+    --danger-color: #dc2626;
+    --warning-color: #f59e0b;
+    --info-color: #3b82f6;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+.nav-link {
+    text-decoration: none;
+}
+
+.nav-link:hover {
+    border-bottom: 2px solid var(--primary-color);
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .hidden-mobile {
+        display: none;
+    }
+}
